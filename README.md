@@ -1,0 +1,5 @@
+This is VSTO AddIn for MS Excel. It may be helpful to count all your inventory items. The main highlights are:
+
+* Storing **the raw data separetly from the tables** (edit forms) in a hidden worksheet. When the workbook being saved only that hidden worksheet is stored on the hard drive without heads of the columns. If some one open this file, even on different location, without "Utter Inventory" AddIn then only data in raws will be visible, without forms or headers. If the button "Create Template" being clicked then all nessesary forms will be expanded and data from corresponding columns will be copied, but worksheet with raw data will be hidden, thus the user can confidently enter data and create all reports convieniently.
+* Generating **Barcodes** and **QR codes** for lines in the tables (forms) for items labeling and automated scanning (in TODO list). The plan is to use open source libraries to handle different types of codes.
+* Entering data from **a code scanner via USB** (in TODO list). It is planned to implement QR code recognition from a webcam and a special barcode scanner.

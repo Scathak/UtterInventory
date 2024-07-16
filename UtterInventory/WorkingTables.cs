@@ -8,6 +8,26 @@ namespace UtterInventory
 {
     public partial class ThisAddIn
     {
+        public string[] InventoryKeys = { "#df77e", "#a51aa", "#475bd", "#3fb52", "#7da2c", "#27843", "#64c4a", "#a7a55", "#c5bf4", "#81a8f" };
+
+        public Dictionary<string, string[]> TablesStructure = new Dictionary<string, string[]>()
+        {
+            { "@abb37", new string[] { "#df77e", "#a51aa", "#475bd", "#3fb52", "#7da2c", "#27843", "#64c4a", "#a7a55", "#c5bf4", "#81a8f" } },
+            { "@986cd", new string[] { "#df77e", "#a51aa", "#14ddd", "#a6527", "#d4d25", "#a47a5", "#cd5d4" } },
+            { "@feab5", new string[] { "#df77e", "#a51aa", "#475bd", "#3fb52", "#7da2c", "#27843", "#64c4a", "#a7a55", "#9258d", "#46a88", "#c5bf4", "#54c01", "#81a8f", "#5d5ae", "#4f29f", "#304b2", "#c5bf4", "#81a8f", "#a47a5", "#cd5d4" }},
+            { "@ca35f", new string[] { "#df77e", "#a51aa", "#475bd", "#14ddd", "#a6527" }}
+
+        };
+
+        public Dictionary<string, string> TablesNames  = new Dictionary<string, string>()
+        {
+            { "@abb37", "Inventory List" },
+            { "@986cd", "Financial Balance" },
+            { "@feab5", "Movement of Inventories" },
+            { "@ca35f", "Balance Worksheet" }
+        };
+
+
         public void DeployTables(int row, int col)
         {
             if (OnStartEmpty)
@@ -55,6 +75,20 @@ namespace UtterInventory
                    .ToArray();
                 deployHeaders("Balance Worksheet", selectedValues, row, col, ws);
             }
+        }
+        public void deployTablesFromXml(Structure structure, int row, int col)
+        {
+            var wb = Application.ActiveWorkbook;
+            foreach (var table in structure.Tables)
+            {
+                var ws = (Excel.Worksheet)wb.Worksheets.Add(Type: XlSheetType.xlWorksheet);
+                var selectedColNames = GetAllStrings()
+                   .Where(x => table.ColumnsNames.Contains(x.Key))
+                   .Select(x => x.Value)
+                   .ToArray();
+                var selectedTableName = GetAllTablesNames()[table.TableName];
+                deployHeaders(selectedTableName, selectedColNames, row, col, ws);
+            };
         }
         public void deployRawDataHeaders(string[] headings, Excel.Worksheet ws)
         {
@@ -109,6 +143,16 @@ namespace UtterInventory
                 }
             }
         }
+        public Dictionary<string, string> GetAllTablesNames()
+        {
+            return new Dictionary<string, string>
+            {
+                { "@abb37", "Inventory List" },
+                { "@986cd", "Financial Balance" },
+                { "@feab5", "Movement of Inventories" },
+                { "@ca35f", "Balance Worksheet" },
+            };
+        }
         public Dictionary<string,string> GetAllStrings()
         {
             return new Dictionary<string, string>
@@ -146,7 +190,7 @@ namespace UtterInventory
         }
         string[] InventoryListKeys()
         {
-            return new string[] { "#df77e", "#a51aa", "#475bd", "#3fb52", "#7da2c", "#27843", "#64c4a", "#a7a55", "#c5bf4", "#81a8f" };
+            return InventoryKeys;
         }
         string[] GetFinancialBalanceStrings()
         {

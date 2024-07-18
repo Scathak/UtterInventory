@@ -12,16 +12,11 @@ namespace UtterInventory
         private void button1_Click(object sender, RibbonControlEventArgs e)
         {
             var tablesStructure = Globals.ThisAddIn.ReadCustomXML("structure");
-            if (tablesStructure != null)
-            {
-                Globals.ThisAddIn.deployTablesFromXml(tablesStructure,7,1);
-            }
-            else
-            {
-                Globals.ThisAddIn.DeployTables(7, 1);
-                Globals.ThisAddIn.DataReplication(Globals.ThisAddIn.Application.ActiveWorkbook, 1, 1);
+            if (tablesStructure == null)  {
                 Globals.ThisAddIn.StructureToCustomXml();
             }
+            Globals.ThisAddIn.DeployTables(7, 1);
+            Globals.ThisAddIn.DataReplication(Globals.ThisAddIn.Application.ActiveWorkbook, 7, 1);
         }
         private void button2_Click(object sender, RibbonControlEventArgs e)
         {

@@ -4,11 +4,8 @@ namespace UtterInventory
 {
     public partial class ThisAddIn
     {
-        public bool OnStartEmpty; 
-        public object[][] strings = new object[2][];
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
-            OnStartEmpty = IsEmpty();
             this.Application.WorkbookBeforeSave += new Excel.AppEvents_WorkbookBeforeSaveEventHandler(Application_WorkbookBeforeSave);
             this.Application.WorkbookAfterSave += new Excel.AppEvents_WorkbookAfterSaveEventHandler(Application_WorkbookAfterSave);
         }
@@ -27,9 +24,7 @@ namespace UtterInventory
         void Application_WorkbookAfterSave(Excel.Workbook Wb, bool Success)
         {
             DeployTables(7, 1);
-        }
-        bool IsEmpty() {
-            return (0 == this.Application.Workbooks.Count);
+            Globals.ThisAddIn.DataReplication(Globals.ThisAddIn.Application.ActiveWorkbook, 7, 1);
         }
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
         {

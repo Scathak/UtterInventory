@@ -1,4 +1,5 @@
-﻿using Microsoft.Office.Core;
+﻿using Microsoft.Office.Interop.Excel;
+using Microsoft.Office.Core;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 using System.IO;
@@ -52,10 +53,10 @@ namespace UtterInventory
             }
             return obj;
         }
-        public Structure ReadCustomXML(string context)
+        public Structure ReadCustomXML(Workbook wb, string context)
         {
             Structure returnObject = null;
-            CustomXMLParts customElements = Globals.ThisAddIn.Application.ActiveWorkbook.CustomXMLParts;
+            CustomXMLParts customElements = wb.CustomXMLParts;
 
             foreach (CustomXMLPart element in customElements)
             {
@@ -67,7 +68,7 @@ namespace UtterInventory
             }
             return returnObject;
         }
-        public void StructureToCustomXml()
+        public void defaultStructureToCustomXml(Workbook wb)
         {
             var ListOfTables = new Structure();
             ListOfTables.Tables = new List<TableXml>();
@@ -78,7 +79,7 @@ namespace UtterInventory
                 table.ColumnsNames = item.Value;
                 ListOfTables.Tables.Add(table);
             }
-            Globals.ThisAddIn.Application.ActiveWorkbook.CustomXMLParts.Add(ToXml(ListOfTables));
+            wb.CustomXMLParts.Add(ToXml(ListOfTables));
         }
     }
 }

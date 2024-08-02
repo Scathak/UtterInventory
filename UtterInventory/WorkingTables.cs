@@ -1,14 +1,22 @@
 ﻿using Microsoft.Office.Interop.Excel;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
-
 
 namespace UtterInventory
 {
     public partial class ThisAddIn
     {
+        public const string rawDataSheetName = "_rawData";
+        public const string structureXMLName = "structure";
+        public const int topLeftCornerTableRow = 7;
+        public const int topLeftCornerTableCol = 1;
         public object[,] RawDataCache;
+        public int totalNumberOfStyles = 0;
+        private int currentStyle = 24;
+        public Dictionary<string, int> stylesForTables = new Dictionary<string, int>();
 
         public Dictionary<string, string[]> TablesStructure = new Dictionary<string, string[]>()
         {
@@ -18,7 +26,7 @@ namespace UtterInventory
             { "@ca35f", new string[] { "#df77e", "#a51aa", "#475bd", "#14ddd", "#a6527" }},
             { "@49dfb", new string[] { "#df77e", "#a51aa", "#475bd", "#3fb52", "#7da2c", "#27843", "#64c4a", "#a7a55", "#d8374", "#c11f8", "#1c53e", "#14ddd", "#a6527", "#9258d", "#46a88", "#c5bf4", "#54c01",  "#d4d25",  "#81a8f",  "#5d5ae", "#4f29f", "#304b2", "#a47a5", "#cd5d4"} }
         };
-
+        
         private Dictionary<string, string> AllKeys = new Dictionary<string, string>()
         {
             { "#df77e", "Inventary Number" },
@@ -52,7 +60,7 @@ namespace UtterInventory
             { "@986cd", "Financial Balance" },
             { "@feab5", "Movement of Inventories" },
             { "@ca35f", "Balance Worksheet" },
-            { "@49dfb", "_rawData" },
+            { "@49dfb", rawDataSheetName },
         };
         private Dictionary<string, string> TablesToCopyOn = new Dictionary<string, string>()
         {
@@ -65,7 +73,7 @@ namespace UtterInventory
         public void RefreshCache(Worksheet ws)
         {
             Range OccupiedDataRange = ws.Range[ws.Cells[1, 1], GetOccupiedCells(ws)];
-            RawDataCache = OccupiedDataRange.Cells.Value2;
+            RawDataCache = OccupiedDataRange.Cells.Value2 as object[,];
         }
         public Dictionary<string, string> GetAllTablesNames()
         {
@@ -87,14 +95,23 @@ namespace UtterInventory
         {
             return specificStrings;
         }
-        public void DeployTables(int row, int col)
+        public void DeployTables(Workbook wb, int row, int col)
         {
-            var wb = Application.ActiveWorkbook;
-            Worksheet ws = wb.ActiveSheet;
             foreach (var table in GetAllTablesNames())
             {
-                CreateTable(wb, table.Value, GetTablesStructure()[table.Key], row, col);
+                if (!workSheetExist(wb, table.Value))
+                {
+                    CreateTable(wb, table.Value, GetTablesStructure()[table.Key], row, col);
+                }
             }
+        }
+        public bool workSheetExist(Workbook wb, string sheetName)
+        {
+            foreach(Worksheet worksheet in wb.Sheets)
+            {
+                if (worksheet.Name == sheetName) { return true; }
+            }
+            return false;
         }
         public void CreateTable(Workbook wb, string tableName, string[] columnsKeys, int row, int col)
         {
@@ -111,12 +128,18 @@ namespace UtterInventory
             {
                 ws = wb.Worksheets.Add(Type: XlSheetType.xlWorksheet);
                 ws.Name = tableName;
+
+                if (!stylesForTables.ContainsKey(tableName))
+                {
+                    stylesForTables.Add(tableName, currentStyle++);
+                    if (currentStyle > totalNumberOfStyles) currentStyle = 0;
+                }
             }
             var selectedValues = GetAllStrings()
                .Where(x => columnsKeys.Contains(x.Key))
                .Select(x => x.Value)
                .ToArray();
-            if (tableName == "_rawData") 
+            if (tableName == rawDataSheetName) 
             {
                 deployRawDataHeaders(GetAllStrings().Keys.ToArray(), ws);
             }
@@ -125,9 +148,8 @@ namespace UtterInventory
                 deployHeaders(tableName, selectedValues, row, col, ws);
             }
         }
-        public void deployTablesFromXml(Structure structure, int row, int col)
+        public void deployTablesFromXml(Workbook wb, Structure structure, int row, int col)
         {
-            var wb = Application.ActiveWorkbook;
             foreach (var table in structure.Tables)
             {
                 var ws = (Worksheet)wb.Worksheets.Add(Type: XlSheetType.xlWorksheet);
@@ -144,6 +166,7 @@ namespace UtterInventory
             ws.Columns.AutoFit();
             ws.Cells.ColumnWidth = 14;
             ws.Cells.Font.Size = 8;
+            
             if (headings != null && headings.Length > 0)
             {
                 var tableWidth = headings?.Length - 1;
@@ -153,8 +176,29 @@ namespace UtterInventory
                     ws.Cells[1, i + 1].Value = columnName;
                     i++;
                 }
-                RefreshCache(ws);
             }
+        }
+        public void applyTableStyles(Worksheet ws, Range tableRawData)
+        {
+            tableRawData.Select();
+            Globals.ThisAddIn.Application.CutCopyMode = XlCutCopyMode.xlCut;
+            if(!objectExist(ws, ws.Name)) {
+                ws.ListObjects.Add(XlListObjectSourceType.xlSrcRange, tableRawData, Type.Missing, XlYesNoGuess.xlYes).Name = ws.Name;
+                ws.ListObjects[ws.Name].TableStyle = Globals.ThisAddIn.Application.ActiveWorkbook.TableStyles.Item(stylesForTables[ws.Name]);
+                ws.Tab.Color = XlRgbColor.rgbBlue;
+            }
+        }
+        public void selectRow(Worksheet ws, int firstCornerRow, int firstCornerColumn, int tableWidth, int rowToSelect)
+        {
+            ws.Range[ws.Cells[rowToSelect + firstCornerRow, firstCornerColumn], ws.Cells[rowToSelect + firstCornerRow, tableWidth + firstCornerColumn]].Select();
+        }
+        public bool objectExist(Worksheet ws, string objName)
+        {
+            foreach (ListObject currentObject in ws.ListObjects)
+            {
+                if(currentObject.Name == objName) return true;
+            }
+            return false;
         }
         public void deployHeaders(string WSName, string[] headings, int row, int col, Worksheet ws)
         { 
@@ -163,19 +207,13 @@ namespace UtterInventory
             ws.Cells.Font.Size = 8;
             ws.EnableOutlining = false;
             Application.ActiveWindow.DisplayGridlines = false;
+
             if (headings != null && headings.Length > 0)
             {
-                var tableWidth = headings?.Length - 1;
-                Range tableRawData = ws.Range[ws.Cells[row, col], ws.Cells[(row + 1), (col + tableWidth)]];
-                Range headingsRange = ws.Range[ws.Cells[row, col], ws.Cells[(row), (col + tableWidth)]];
-                Range dataOnly = ws.Range[ws.Cells[row + 1, col], ws.Cells[(row + 2), (col + tableWidth)]];
-                ws.Names.Add("Table", tableRawData);
-                ws.Names.Add("Headings", headingsRange);
-                ws.Names.Add("Data", dataOnly);
-                headingsRange.Font.Bold = true;
-                headingsRange.Interior.Color = Color.LightYellow;
-                tableRawData.Borders.Color = Color.LightGray;
-                dataOnly.Interior.Color = Color.FromArgb(0, 243, 243, 243);
+                var tableWidth = headings.Length - 1;
+                var columnHeigh = RawDataCache.GetLength(0);
+                Range tableRawData = ws.Range[ws.Cells[row, col], ws.Cells[(row + columnHeigh), (col + tableWidth)]];
+                applyTableStyles(ws, tableRawData);
                 var i = 0;
                 foreach (var columnName in headings)
                 {

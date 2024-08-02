@@ -11,12 +11,14 @@ namespace UtterInventory
         }
         private void button1_Click(object sender, RibbonControlEventArgs e)
         {
-            var tablesStructure = Globals.ThisAddIn.ReadCustomXML("structure");
+            var wb = Globals.ThisAddIn.Application.ActiveWorkbook;
+            var tablesStructure = Globals.ThisAddIn.ReadCustomXML(wb, ThisAddIn.structureXMLName);
             if (tablesStructure == null)  {
-                Globals.ThisAddIn.StructureToCustomXml();
+                Globals.ThisAddIn.defaultStructureToCustomXml(wb);
             }
-            Globals.ThisAddIn.DeployTables(7, 1);
-            Globals.ThisAddIn.DataReplication(Globals.ThisAddIn.Application.ActiveWorkbook, 7, 1);
+            Globals.ThisAddIn.DeployTables(wb, ThisAddIn.topLeftCornerTableRow, ThisAddIn.topLeftCornerTableCol);
+            Globals.ThisAddIn.RefreshCache(wb.Sheets[ThisAddIn.rawDataSheetName]);
+            Globals.ThisAddIn.DataReplication(wb, ThisAddIn.topLeftCornerTableRow, ThisAddIn.topLeftCornerTableCol);
         }
         private void button2_Click(object sender, RibbonControlEventArgs e)
         {
@@ -30,8 +32,6 @@ namespace UtterInventory
             string outstrings;
             var wb = Globals.ThisAddIn.Application.ActiveWorkbook;
             var ws = wb.ActiveSheet;
-            var targetRange = ws.Range[ws.Cells[1 + 1, 1], ws.Cells[(1 + 2), (1 + 24)]];
-            var targetRow = ws.Range[ws.Cells[1 + 1, 1], ws.Cells[(1 + 1), (1 + 24)]];
 
             if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
@@ -44,8 +44,9 @@ namespace UtterInventory
                         outstrings = sr.ReadLine();
                         if (outstrings.Length > 0)
                         {
-                            var currentRow = ws.Range[ws.Cells[1 + i, 1], ws.Cells[(1 + i), (1 + 24)]];
-                            currentRow.Value2 = outstrings.Split(',', ';');
+                            var arrayOfRow = outstrings.Split(',', ';');
+                            var currentRow = ws.Range[ws.Cells[1 + i, 1], ws.Cells[(1 + i), (1 + arrayOfRow.Length)]];
+                            currentRow.Value2 = arrayOfRow;
                             i++;
                         }
                     }

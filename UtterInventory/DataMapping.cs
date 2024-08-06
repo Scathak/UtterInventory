@@ -43,10 +43,14 @@ namespace UtterInventory
                         j++;
                     }
                 }
-                var occupiedRange = wsForCopy.ListObjects[wsForCopy.Name].Range;
-                occupiedRange.Offset[1, 0].Resize[columnHeigh-1].Cells.Value2 = cacheToCopy;
-                SelectOneCell(wsForCopy, occupiedRange,2,1);
+                var rangeToCopy = wsForCopy.ListObjects[wsForCopy.Name].Range;
+                rangeToCopy.Offset[1, 0].Resize[columnHeigh-1].Cells.Value2 = cacheToCopy;
+                SelectOneCell(wsForCopy, rangeToCopy,2,1);
             }
+        }
+        public void ApplyColumnsTypes(Range OccupiedDataRange )
+        {
+
         }
         public void SelectOneCell(Worksheet ws, Range range, int row, int col)
         {

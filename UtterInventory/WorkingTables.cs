@@ -1,8 +1,6 @@
 ﻿using Microsoft.Office.Interop.Excel;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Globalization;
 using System.Linq;
 
 namespace UtterInventory
@@ -37,7 +35,7 @@ namespace UtterInventory
             { "#27843", "Color" },
             { "#64c4a", "Size" },
             { "#a7a55", "Weight" },
-            { "#d8374", "Expiry Date" },
+            { "#d8374", "Exploitation period" },
             { "#c11f8", "Category" },
             { "#1c53e", "Department" },
             { "#14ddd", "Unit" },

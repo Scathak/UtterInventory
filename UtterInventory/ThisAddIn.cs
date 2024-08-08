@@ -23,6 +23,9 @@ namespace UtterInventory
         void Application_WorkbookBeforeSave(Workbook Wb, bool Success1, ref bool Success)
         {
             this.Application.DisplayAlerts = false;
+            this.Application.ScreenUpdating = false;
+            Wb.Sheets[rawDataSheetName].Visible = XlSheetVisibility.xlSheetVisible;
+
             foreach (Worksheet sh in Wb.Sheets)
             {
                 if(sh.Name != rawDataSheetName)
@@ -31,12 +34,17 @@ namespace UtterInventory
                 }
             }
             this.Application.DisplayAlerts = true;
+            this.Application.ScreenUpdating = true;
         }
         void Application_WorkbookAfterSave(Workbook Wb, bool Success)
         {
+            this.Application.DisplayAlerts = false;
+            this.Application.ScreenUpdating = false;
             DeployTables(Wb, topLeftCornerTableRow, topLeftCornerTableCol);
             RefreshCache(Wb.Sheets[rawDataSheetName]);
             Globals.ThisAddIn.DataReplication(Wb, topLeftCornerTableRow, topLeftCornerTableCol);
+            this.Application.DisplayAlerts = true;
+            this.Application.ScreenUpdating = true;
         }
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
         {

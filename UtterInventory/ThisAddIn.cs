@@ -18,6 +18,7 @@ namespace UtterInventory
             {
                 RefreshCache(Wb.Sheets[rawDataSheetName]);
             }
+            Globals.ThisAddIn.Application.CutCopyMode = XlCutCopyMode.xlCut;
         }
 
         void Application_WorkbookBeforeSave(Workbook Wb, bool Success1, ref bool Success)

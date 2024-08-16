@@ -53,5 +53,11 @@ namespace UtterInventory
                 }
             }
         }
+
+        private void button3_Click(object sender, RibbonControlEventArgs e)
+        {
+            var qrHelper = new QRcodesHelper();
+            qrHelper.GenerateQRCodeForSelectedRange();
+        }
     }
 }

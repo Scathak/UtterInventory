@@ -45,11 +45,11 @@ namespace UtterInventory
                 }
                 var rangeToCopy = wsForCopy.ListObjects[wsForCopy.Name].Range;
                 rangeToCopy.Offset[1, 0].Resize[columnHeigh-1].Cells.Value2 = cacheToCopy;
-                
-                //rangeToCopy.Locked = true;
                 SelectOneCell(wsForCopy, rangeToCopy,2,1);
             }
             rawDataSheet.Visible = XlSheetVisibility.xlSheetHidden;
+
+            CreateQRcodesForTable(wb.Sheets[barCodeSheetName]);
         }
         public void ApplyColumnsTypes(Range OccupiedDataRange )
         {
@@ -64,6 +64,26 @@ namespace UtterInventory
         {
             ws.Activate();
             return ws.Cells.SpecialCells(XlCellType.xlCellTypeLastCell, Type.Missing);
+        }
+        public static void CreateQRcodesForTable(Worksheet ws)
+        {
+            if (ws.Name.Equals(barCodeSheetName, StringComparison.OrdinalIgnoreCase))
+            {
+                Globals.ThisAddIn.Application.Application.DisplayAlerts = false;
+                Globals.ThisAddIn.Application.Application.ScreenUpdating = false;
+
+                Range usedRange = ws.ListObjects[ws.Name].Range;
+                usedRange = usedRange.Offset[1, 0].Resize[10]; //usedRange.Rows.Count
+                for (int i = 1; i < usedRange.Rows.Count; i++)
+                {
+                    Range rowRange = usedRange.Rows[i];
+                    QRcodesHelper.GetQR(ws, rowRange);
+                }
+                usedRange.Cells[1, 1].Select();
+
+                Globals.ThisAddIn.Application.Application.DisplayAlerts = true;
+                Globals.ThisAddIn.Application.Application.ScreenUpdating = true;
+            }
         }
     }
 }

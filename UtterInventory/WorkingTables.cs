@@ -1,6 +1,8 @@
 ﻿using Microsoft.Office.Interop.Excel;
 using System;
 using System.Collections.Generic;
+using System.Drawing.Text;
+using System.Drawing;
 using System.Linq;
 
 namespace UtterInventory
@@ -8,9 +10,12 @@ namespace UtterInventory
     public partial class ThisAddIn
     {
         public const string rawDataSheetName = "_rawData";
+        public const string barCodeSheetName = "Bar codes";
         public const string structureXMLName = "structure";
+        public const string BarcodeFontName = "Libre Barcode 39";
         public const int topLeftCornerTableRow = 7;
         public const int topLeftCornerTableCol = 1;
+
         public object[,] RawDataCache;
         public int totalNumberOfStyles = 0;
         private int currentStyle = 24;
@@ -22,6 +27,7 @@ namespace UtterInventory
             { "@986cd", new string[] { "#df77e", "#a51aa", "#14ddd", "#a6527", "#d4d25", "#a47a5", "#cd5d4" } },
             { "@feab5", new string[] { "#df77e", "#a51aa", "#475bd", "#3fb52", "#7da2c", "#27843", "#64c4a", "#a7a55", "#9258d", "#46a88", "#c5bf4", "#54c01", "#81a8f", "#5d5ae", "#4f29f", "#304b2", "#a47a5", "#cd5d4" }},
             { "@ca35f", new string[] { "#df77e", "#a51aa", "#475bd", "#14ddd", "#a6527" }},
+            { "@fw02z", new string[] { "#a51aa", "#475bd", "#3gq20" }},
             { "@49dfb", new string[] { "#df77e", "#a51aa", "#475bd", "#3fb52", "#7da2c", "#27843", "#64c4a", "#a7a55", "#d8374", "#c11f8", "#1c53e", "#14ddd", "#a6527", "#9258d", "#46a88", "#c5bf4", "#54c01",  "#d4d25",  "#81a8f",  "#5d5ae", "#4f29f", "#304b2", "#a47a5", "#cd5d4"} }
         };
         
@@ -50,7 +56,8 @@ namespace UtterInventory
             { "#4f29f", "Reorder Time" },
             { "#304b2", "Quantity in Reorder" },
             { "#a47a5", "Date" },
-            { "#cd5d4", "Time" }
+            { "#cd5d4", "Time" },
+            { "#3gq20", "Bar code" }
         };
         private Dictionary<string, string> AllTablesNames = new Dictionary<string, string>()
         {
@@ -58,6 +65,7 @@ namespace UtterInventory
             { "@986cd", "Financial Balance" },
             { "@feab5", "Movement of Inventories" },
             { "@ca35f", "Balance Worksheet" },
+            { "@fw02z", "Bar codes" },
             { "@49dfb", rawDataSheetName },
         };
         private Dictionary<string, string> TablesToCopyOn = new Dictionary<string, string>()
@@ -65,7 +73,8 @@ namespace UtterInventory
             { "@abb37", "Inventory List" },
             { "@986cd", "Financial Balance" },
             { "@feab5", "Movement of Inventories" },
-            { "@ca35f", "Balance Worksheet" }
+            { "@ca35f", "Balance Worksheet" },
+            { "@fw02z", "Bar codes" }
         };
         private string[] specificStrings = new string[] { "Date of Inquiry", "Expiry Date", "Department", "Category", "Quantity in Reorder" };
         public void RefreshCache(Worksheet ws)
@@ -164,7 +173,7 @@ namespace UtterInventory
             ws.Columns.AutoFit();
             ws.Cells.ColumnWidth = 14;
             ws.Cells.Font.Size = 8;
-            
+
             if (headings != null && headings.Length > 0)
             {
                 var tableWidth = headings?.Length - 1;
@@ -179,13 +188,57 @@ namespace UtterInventory
         public void applyTableStyles(Worksheet ws, Range tableRawData)
         {
             tableRawData.Select();
-            Globals.ThisAddIn.Application.CutCopyMode = XlCutCopyMode.xlCut;
-            if(!objectExist(ws, ws.Name)) {
-                ws.ListObjects.Add(XlListObjectSourceType.xlSrcRange, tableRawData, Type.Missing, XlYesNoGuess.xlYes).Name = ws.Name;
-                ws.ListObjects[ws.Name].TableStyle = Globals.ThisAddIn.Application.ActiveWorkbook.TableStyles.Item(stylesForTables[ws.Name]);
+
+             
+            if (!objectExist(ws, ws.Name)) {
+                ws.ListObjects.Add(XlListObjectSourceType.xlSrcRange, tableRawData, false , XlYesNoGuess.xlYes).Name = ws.Name;
+
+                if (!ws.Name.Equals(barCodeSheetName, StringComparison.OrdinalIgnoreCase))
+                {
+                    ws.ListObjects[ws.Name].TableStyle = Globals.ThisAddIn.Application.ActiveWorkbook.TableStyles.Item(stylesForTables[ws.Name]);
+                }
                 ws.Tab.Color = XlRgbColor.rgbBlue;
             }
         }
+        private bool IsFontInstalled(string fontName)
+        {
+            using (InstalledFontCollection fontsCollection = new InstalledFontCollection())
+            {
+                foreach (FontFamily fontFamily in fontsCollection.Families)
+                {
+                    if (fontFamily.Name.Equals(fontName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        public void SetFontForColumn(Worksheet ws, string fontName, int fontSize, int columnIndex)
+        {
+            if (!IsFontInstalled(fontName))
+            {
+                System.Windows.Forms.MessageBox.Show($"Font '{fontName}' is not installed on the system.");
+                return;
+            }
+
+            ListObjects tables = ws.ListObjects;
+            Range columnRange = null;
+
+            foreach (ListObject table in tables)
+            {
+                if (table.Name.Equals(ws.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    columnRange = table.ListColumns[columnIndex].Range;
+                    ws.Columns[columnIndex].EntireColumn.AutoFit();
+                    columnRange = columnRange.Offset[1, 0].Resize[columnRange.Rows.Count - 1];
+                    break;
+                }
+            }
+            columnRange.Font.Name = fontName;
+            columnRange.Font.Size = fontSize;
+        }
+
         public void selectRow(Worksheet ws, int firstCornerRow, int firstCornerColumn, int tableWidth, int rowToSelect)
         {
             ws.Range[ws.Cells[rowToSelect + firstCornerRow, firstCornerColumn], ws.Cells[rowToSelect + firstCornerRow, tableWidth + firstCornerColumn]].Select();
@@ -211,7 +264,11 @@ namespace UtterInventory
                 var tableWidth = headings.Length - 1;
                 var columnHeigh = RawDataCache.GetLength(0);
                 Range tableRawData = ws.Range[ws.Cells[row, col], ws.Cells[(row + columnHeigh), (col + tableWidth)]];
+
                 applyTableStyles(ws, tableRawData);
+
+                if(ws.Name.Equals(barCodeSheetName, StringComparison.OrdinalIgnoreCase)) SetFontForColumn(ws, BarcodeFontName, 36, 3);
+
                 var i = 0;
                 foreach (var columnName in headings)
                 {

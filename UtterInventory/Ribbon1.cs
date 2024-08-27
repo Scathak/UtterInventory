@@ -59,5 +59,12 @@ namespace UtterInventory
             var qrHelper = new QRcodesHelper();
             qrHelper.GenerateQRCodeForSelectedRange();
         }
+
+        private void toggleButton1_Click(object sender, RibbonControlEventArgs e)
+        {
+            // Toggle the visibility of the custom task pane
+            Globals.ThisAddIn.ToggleTaskPaneVisibility(toggleButton1.Checked);
+            toggleButton1.Label = toggleButton1.Checked ? "Camera Panel Off" : "Camera Panel On";
+        }
     }
 }
